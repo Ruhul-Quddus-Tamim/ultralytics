@@ -12,6 +12,7 @@ from ultralytics.yolo.engine.validator import BaseValidator
 from ultralytics.yolo.utils import DEFAULT_CFG, LOGGER, colorstr, ops
 from ultralytics.yolo.utils.checks import check_requirements
 from ultralytics.yolo.utils.metrics import ConfusionMatrix, DetMetrics, box_iou
+from ultralytics.yolo.utils.callbacks.base import on_val_end
 from ultralytics.yolo.utils.plotting import output_to_target, plot_images
 from ultralytics.yolo.utils.torch_utils import de_parallel
 
@@ -137,6 +138,8 @@ class DetectionValidator(BaseValidator):
 
         if self.args.plots:
             self.confusion_matrix.plot(save_dir=self.save_dir, names=list(self.names.values()))
+            self.confusion_matrix.get_accuracy(self.ap_class, self.ap, save_dir=save_dir, names=list(self.names.values()))
+            on_val_end('on_val_end', self.nt_per_class, self.tp, self.fp, self.p, self.r, self.f1, self.ap, self.ap50, self.ap_class, self.confusion_matrix)
 
     def _process_batch(self, detections, labels):
         """

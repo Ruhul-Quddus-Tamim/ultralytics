@@ -223,6 +223,48 @@ class ConfusionMatrix:
             for i, dc in enumerate(detection_classes):
                 if not any(m1 == i):
                     self.matrix[dc, self.nc] += 1  # predicted background
+    
+    def get_accuracy(self, ap_class, normalize=True, save_dir='', names=()):
+        """ 
+        Custom function added to generate BBOX accuracy metrics 
+        accuracy = Correct detections / Total detections
+        ap = Average precision
+        """
+        # normalize matrix
+        array = self.matrix / ((self.matrix.sum(0).reshape(1, -1) + 1E-6)
+                           if normalize else 1)  # normalize columns
+
+        # Initialize accuracy_dict
+        accuracy_dict = {}
+        for i in range(len(names)):
+            accuracy_dict[names[i]] = {
+            "accuracy": -1,
+            "ap": -1
+        }
+
+        # record accuracy (AP for each class and mAP)
+        for i, c in enumerate(ap_class):
+            # record AP per class
+            accuracy_dict[names[c]]["ap"] = ap[i]
+
+        for i in range(array.shape[0] - 1):
+            for j in range(array.shape[1] - 1):
+                if i == j:
+                # record accuracy only if the class has at least one sample.
+                # otherwise, keep the default value -1
+                # if column i has sum = 0, then it does not have any sample.
+                    if int(self.matrix[:, i].sum()) > 0:
+                    # accuracy = TP bbox / all bbox
+                        accuracy_dict[names[i]]["accuracy"] = float(array[i, j])
+                        break
+
+        # save class_accuracy.json
+        import json
+        with open(Path(save_dir) / 'class_accuracy.json', "w") as acc_file:
+            json.dump(accuracy_dict, acc_file, indent=4)
+
+        # save confusion matrix raw metrics as NPY file
+        np.save(Path(save_dir) / 'raw_confusion_matrix.npy', self.matrix)
 
     def matrix(self):
         return self.matrix
